@@ -158,9 +158,11 @@ Requirements: WindowManager - (x)
 extern uint32_t DASH_BOARD[4];
 extern RC_DATA_TypeDef RC_DATA;
 extern uint8_t NRF24L01_TX_NUM;
-extern Typdef_ModelData _ModelData[4];
+extern Typdef_ModelData _ModelData[4][4];
 extern uint8_t CH3_Switch;
 extern uint8_t CH4_Switch;
+extern uint8_t BACKLIGHT;
+extern uint8_t MODEL;
 
 //
 // Handles
@@ -834,6 +836,7 @@ static void _RC_cbWindow3(WM_MESSAGE * pMsg) {
 		DROPDOWN_SetAutoScroll(hDropdown,1);
 		DROPDOWN_SetScrollbarWidth(hDropdown,40);
 		DROPDOWN_SetListHeight(hDropdown,150);
+		DROPDOWN_SetSel(hDropdown,MODEL);
 
 		//Button
 		BUTTON_SetFont(hButtonCh3, GUI_FONT_20_ASCII);
@@ -860,6 +863,7 @@ static void _RC_cbWindow3(WM_MESSAGE * pMsg) {
         // USER END
         break;
       case WM_NOTIFICATION_SEL_CHANGED:
+				MODEL=DROPDOWN_GetSel(hDropdown);
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
         break;
@@ -1027,7 +1031,7 @@ static void _RC_cbFrameWinSave(WM_MESSAGE* pMsg) {
     case ID_BUTTON_SAVE_OK: 
       switch(NCode) {
 				case WM_NOTIFICATION_CLICKED:		//save config
-				
+				WRITE_CONFIG_File();
 				WM_DeleteWindow(_RC_hWindowSave);
 			break;
 			}
@@ -1077,7 +1081,8 @@ static void _RC_cbFrameWinSystem(WM_MESSAGE* pMsg) {
     TEXT_SetText(hItem, "Backlight");
     
 		pState0.NumItems=110;
-		pState0.v=90;
+		pState0.v=BACKLIGHT;
+		//BSP_LCD_BACKLIGHT_PWM_Set(pState0.v);
 		pState0.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar0,&pState0);
 			
@@ -1107,6 +1112,7 @@ static void _RC_cbFrameWinSystem(WM_MESSAGE* pMsg) {
 				case WM_NOTIFICATION_VALUE_CHANGED:
         WM_GetScrollState(hScrollBar0,&pState0);
 				BSP_LCD_BACKLIGHT_PWM_Set(pState0.v);
+				BACKLIGHT=pState0.v;
 											
 	      break;
 			}
@@ -1171,22 +1177,22 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
 		pState0_p1.NumItems=110;
-		pState0_p1.v=_ModelData[0].SubTrim+50;
+		pState0_p1.v=_ModelData[MODEL][0].SubTrim+50;
 		pState0_p1.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar0,&pState0_p1);
 		
 		pState1_p1.NumItems=110;
-		pState1_p1.v=_ModelData[0].Endpoint_p;
+		pState1_p1.v=_ModelData[MODEL][0].Endpoint_p;
 		pState1_p1.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar1,&pState1_p1);
 
 		pState2_p1.NumItems=110;
-		pState2_p1.v=_ModelData[0].Endpoint_n;;
+		pState2_p1.v=_ModelData[MODEL][0].Endpoint_n;;
 		pState2_p1.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar2,&pState2_p1);
 		
 		CHECKBOX_SetNumStates(hCheckBox,2);
-		CHECKBOX_SetState(hCheckBox,_ModelData[0].Reverse);
+		CHECKBOX_SetState(hCheckBox,_ModelData[MODEL][0].Reverse);
 		
     break;
   case WM_NOTIFY_PARENT:
@@ -1203,7 +1209,7 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_SetColor(GUI_RED);
 				GUI_DispDecAt(pState0_p1.v-50 ,400,20,3);
-				_ModelData[0].SubTrim=pState0_p1.v-50;					
+				_ModelData[MODEL][0].SubTrim=pState0_p1.v-50;					
 				
 	      break;
       // USER START (Optionally insert additional code for further notification handling)
@@ -1220,7 +1226,7 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_SetColor(GUI_RED);
 				GUI_DispDecAt(pState1_p1.v ,400,70,3);
-				_ModelData[0].Endpoint_p=pState1_p1.v;	
+				_ModelData[MODEL][0].Endpoint_p=pState1_p1.v;	
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1230,7 +1236,7 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
       switch(NCode) {
 
       case WM_NOTIFICATION_VALUE_CHANGED:
-				_ModelData[0].Reverse=CHECKBOX_GetState(hCheckBox);
+				_ModelData[MODEL][0].Reverse=CHECKBOX_GetState(hCheckBox);
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1246,7 +1252,7 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState2_p1.v ,400,120,3);
-			 _ModelData[0].Endpoint_n=pState2_p1.v;
+			 _ModelData[MODEL][0].Endpoint_n=pState2_p1.v;
         break;
         
       // USER START (Optionally insert additional code for further notification handling)
@@ -1328,22 +1334,22 @@ static void _cbDialog_P2(WM_MESSAGE * pMsg) {
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
 		pState0_p2.NumItems=110;
-		pState0_p2.v=_ModelData[1].SubTrim+50;;
+		pState0_p2.v=_ModelData[MODEL][1].SubTrim+50;;
 		pState0_p2.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar0,&pState0_p2);
 		
 		pState1_p2.NumItems=110;
-		pState1_p2.v=_ModelData[1].Endpoint_p;
+		pState1_p2.v=_ModelData[MODEL][1].Endpoint_p;
 		pState1_p2.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar1,&pState1_p2);
 
 		pState2_p2.NumItems=110;
-		pState2_p2.v=_ModelData[1].Endpoint_n;
+		pState2_p2.v=_ModelData[MODEL][1].Endpoint_n;
 		pState2_p2.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar2,&pState2_p2);
 
 		CHECKBOX_SetNumStates(hCheckBox,2);
-		CHECKBOX_SetState(hCheckBox,_ModelData[1].Reverse);
+		CHECKBOX_SetState(hCheckBox,_ModelData[MODEL][1].Reverse);
 		
     break;
   case WM_NOTIFY_PARENT:
@@ -1360,7 +1366,7 @@ static void _cbDialog_P2(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState0_p2.v-50 ,400,20,3);
-				_ModelData[1].SubTrim=pState0_p2.v-50;				
+				_ModelData[MODEL][1].SubTrim=pState0_p2.v-50;				
 	      break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1376,7 +1382,7 @@ static void _cbDialog_P2(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState1_p2.v ,400,70,3);
-				_ModelData[1].Endpoint_p=pState1_p2.v;	
+				_ModelData[MODEL][1].Endpoint_p=pState1_p2.v;	
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1387,7 +1393,7 @@ static void _cbDialog_P2(WM_MESSAGE * pMsg) {
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
-				_ModelData[1].Reverse=CHECKBOX_GetState(hCheckBox);
+				_ModelData[MODEL][1].Reverse=CHECKBOX_GetState(hCheckBox);
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1403,7 +1409,7 @@ static void _cbDialog_P2(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState2_p2.v ,400,120,3);
-				_ModelData[1].Endpoint_n=pState2_p2.v;	
+				_ModelData[MODEL][1].Endpoint_n=pState2_p2.v;	
         break;
         
       // USER START (Optionally insert additional code for further notification handling)
@@ -1483,22 +1489,22 @@ static void _cbDialog_P3(WM_MESSAGE * pMsg) {
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
 		pState0_p3.NumItems=110;
-		pState0_p3.v=_ModelData[2].SubTrim+50;
+		pState0_p3.v=_ModelData[MODEL][2].SubTrim+50;
 		pState0_p3.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar0,&pState0_p3);
 		
 		pState1_p3.NumItems=110;
-		pState1_p3.v=_ModelData[2].Endpoint_p;
+		pState1_p3.v=_ModelData[MODEL][2].Endpoint_p;
 		pState1_p3.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar1,&pState1_p3);
 
 		pState2_p3.NumItems=110;
-		pState2_p3.v=_ModelData[2].Endpoint_n;
+		pState2_p3.v=_ModelData[MODEL][2].Endpoint_n;
 		pState2_p3.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar2,&pState2_p3);
 		
 		CHECKBOX_SetNumStates(hCheckBox,2);
-		CHECKBOX_SetState(hCheckBox,_ModelData[2].Reverse);
+		CHECKBOX_SetState(hCheckBox,_ModelData[MODEL][2].Reverse);
     break;
   case WM_NOTIFY_PARENT:
     Id    = WM_GetId(pMsg->hWinSrc);
@@ -1514,7 +1520,7 @@ static void _cbDialog_P3(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState0_p3.v-50 ,400,20,3);
-				_ModelData[2].SubTrim=	pState0_p3.v-50;			
+				_ModelData[MODEL][2].SubTrim=	pState0_p3.v-50;			
 	      break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1530,7 +1536,7 @@ static void _cbDialog_P3(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState1_p3.v ,400,70,3);
-				_ModelData[2].Endpoint_p=	pState1_p3.v;
+				_ModelData[MODEL][2].Endpoint_p=	pState1_p3.v;
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1541,7 +1547,7 @@ static void _cbDialog_P3(WM_MESSAGE * pMsg) {
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
-				_ModelData[2].Reverse=CHECKBOX_GetState(hCheckBox);
+				_ModelData[MODEL][2].Reverse=CHECKBOX_GetState(hCheckBox);
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1557,7 +1563,7 @@ static void _cbDialog_P3(WM_MESSAGE * pMsg) {
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState2_p3.v ,400,120,3);
-				_ModelData[2].Endpoint_n=	pState2_p3.v;
+				_ModelData[MODEL][2].Endpoint_n=	pState2_p3.v;
         break;
         
       // USER START (Optionally insert additional code for further notification handling)
@@ -1639,22 +1645,22 @@ WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
 		pState0_p4.NumItems=110;
-		pState0_p4.v=_ModelData[3].SubTrim+50;
+		pState0_p4.v=_ModelData[MODEL][3].SubTrim+50;
 		pState0_p4.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar0,&pState0_p4);
 		
 		pState1_p4.NumItems=110;
-		pState1_p4.v=_ModelData[3].Endpoint_p;
+		pState1_p4.v=_ModelData[MODEL][3].Endpoint_p;
 		pState1_p4.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar1,&pState1_p4);
 
 		pState2_p4.NumItems=110;
-		pState2_p4.v=_ModelData[3].Endpoint_n;
+		pState2_p4.v=_ModelData[MODEL][3].Endpoint_n;
 		pState2_p4.PageSize=10;
 		SCROLLBAR_SetState(hScrollBar2,&pState2_p4);
 		
 		CHECKBOX_SetNumStates(hCheckBox,2);
-		CHECKBOX_SetState(hCheckBox,_ModelData[3].Reverse);
+		CHECKBOX_SetState(hCheckBox,_ModelData[MODEL][3].Reverse);
 		
     break;
   case WM_NOTIFY_PARENT:
@@ -1671,7 +1677,7 @@ WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState0_p4.v-50 ,400,20,3);
-				_ModelData[3].SubTrim=pState0_p4.v-50;				
+				_ModelData[MODEL][3].SubTrim=pState0_p4.v-50;				
 	      break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1687,7 +1693,7 @@ WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState1_p4.v ,400,70,3);
-				_ModelData[3].Endpoint_p=pState1_p4.v;
+				_ModelData[MODEL][3].Endpoint_p=pState1_p4.v;
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1698,7 +1704,7 @@ WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
       case WM_NOTIFICATION_VALUE_CHANGED:
         // USER START (Optionally insert code for reacting on notification message)
         // USER END
-				_ModelData[3].Reverse=CHECKBOX_GetState(hCheckBox);
+				_ModelData[MODEL][3].Reverse=CHECKBOX_GetState(hCheckBox);
         break;
       // USER START (Optionally insert additional code for further notification handling)
       // USER END
@@ -1714,7 +1720,7 @@ WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
 				GUI_SetColor(GUI_RED);
 				GUI_SetTextMode(GUI_TM_TRANS);
 				GUI_DispDecAt(pState2_p4.v ,400,120,3);
-				_ModelData[3].Endpoint_n=pState2_p4.v;
+				_ModelData[MODEL][3].Endpoint_n=pState2_p4.v;
         break;
         
       // USER START (Optionally insert additional code for further notification handling)
@@ -1872,13 +1878,13 @@ void MainTask(void) {
   WM_SetCallback(WM_HBKWIN, _RC_cbBkWindow);
 	
 	_RC_CreateWindow();	
-	GUI_CURSOR_Show();	
+	//GUI_CURSOR_Show();	
  
   while (1) {
     GUI_Delay(50);
     WM_SendMessageNoPara(WM_HBKWIN, MSG_MOVE); // Message for moving the toucan
 		
-		RC_TX_DataHandle(&RC_DATA);		
+		RC_TX_DataHandle(&RC_DATA,&_ModelData[MODEL][0]);		
 		NRF24L01_TxPacket( (uint8_t *)&RC_DATA.RC_TX_Data	, NRF24L01_TX_NUM );
 			
 		//window 2

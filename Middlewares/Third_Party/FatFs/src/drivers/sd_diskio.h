@@ -33,6 +33,8 @@
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
+#include "ff_gen_drv.h"
+
 extern Diskio_drvTypeDef  SD_Driver;
 
 #endif /* __SD_DISKIO_H */

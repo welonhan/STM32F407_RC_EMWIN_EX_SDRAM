@@ -47,3 +47,6 @@
 						(WM_IsWindow(_RC_hWindowSave))))	
 		_Dashboard(&_angle[0]);	
 	2、删除含有multipage的framework时，需要先删除page，然后删除multipage，再删除framework，否则再重新重新创建该framework时候会死机
+	
+2017.4.20
+	1SD卡读写错误，降低SD卡频率

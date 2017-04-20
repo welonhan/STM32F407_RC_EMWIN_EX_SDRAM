@@ -299,8 +299,8 @@ typedef struct
 }RC_SAVE_DATA_TypeDef;
 */
 
-void 				RC_TX_DataHandle(RC_DATA_TypeDef* rc_data);
-
+void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data,Typdef_ModelData *_ModelData);
+void WRITE_CONFIG_File(void);
 #endif /* __MAIN_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

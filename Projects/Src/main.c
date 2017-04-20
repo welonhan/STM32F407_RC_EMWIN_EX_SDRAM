@@ -93,18 +93,52 @@ static void Error_Handler(void);
 void 				FATFS_Test(void);
 static void Fill_Buffer(uint16_t *pBuffer, uint32_t uwBufferLenght, uint16_t uwOffset);
 uint8_t 		Buffercmp(uint16_t* pBuffer1, uint16_t* pBuffer2, uint16_t BufferLength);	
-void 				SRAM_Test();
+void 				SRAM_Test(void);
+void 				TXT_2_NUM(uint8_t* txt);
+uint32_t 		NUM_2_TXT(uint8_t* txt);
+void 				READ_CONFIG_File(void);
+void 				WRITE_CONFIG_File(void);
 
-Typdef_ModelData _ModelData[4]=
+Typdef_ModelData _ModelData[4][4]=
 {
-	{1,	0, 	100, 100,0},
-	{2,	0, 	100, 100,0},
-	{3,	0, 	100, 100,0,},
-	{4,	0, 	100, 100,0},
+	//Model1
+	{
+		{11,	0, 	100, 100,0},
+		{12,	0, 	100, 100,0},
+		{13,	0, 	100, 100,0},
+		{14,	0, 	100, 100,0},
+	},
+
+	//Model2
+	{
+		{21,	0, 	100, 100,0},
+		{22,	0, 	100, 100,0},
+		{23,	0, 	100, 100,0},
+		{24,	0, 	100, 100,0},
+	},
+
+	//Model3
+	{
+		{31,	0, 	100, 100,0},
+		{32,	0, 	100, 100,0},
+		{33,	0, 	100, 100,0},
+		{34,	0, 	100, 100,0},
+	},
+
+	//Model4
+	{
+		{41,	0, 	100, 100,0},
+		{42,	0, 	100, 100,0},
+		{43,	0, 	100, 100,0},
+		{44,	0, 	100, 100,0},
+	},
 };
+
+uint8_t BACKLIGHT=100;
 
 uint8_t CH3_Switch=0;
 uint8_t CH4_Switch=0;
+uint8_t MODEL=0;
 
 uint32_t DASH_BOARD[4]=
 {
@@ -125,7 +159,7 @@ int main(void)
        - Global MSP (MCU Support Package) initialization
      */
 	uint32_t i,temp1=0,temp2=0;
-	uint32_t x,y,pixel,pixel1;
+	//uint32_t x,y,pixel,pixel1;
 	RC_DATA.TX_CHANL=60;
 	
   HAL_Init();
@@ -200,7 +234,9 @@ int main(void)
 */
 	
 	//FATFS_Test();
-	SRAM_Test();
+	//SRAM_Test();
+	READ_CONFIG_File();
+	BSP_LCD_BACKLIGHT_PWM_Set(BACKLIGHT);
 	//STemWin need enable CRC
 	__HAL_RCC_CRC_CLK_ENABLE();
 	
@@ -236,8 +272,9 @@ void FATFS_Test(void)
 {
 	FRESULT res;                                          /* FatFs function common result code */
   uint32_t byteswritten, bytesread;                     /* File write/read counts */
-  uint8_t wtext[] = "This is STM32 working with FatFs"; /* File write buffer */
-  uint8_t rtext[100];                                   /* File read buffer */
+  //uint8_t wtext[] = "This is STM32 working with FatFs"; /* File write buffer */
+  uint8_t wtext[] = "1,0,100,100,0;2,0,100,100,0;3,0,100,100,0;4,0,100,100,0;5,100;";
+	uint8_t rtext[100];                                   /* File read buffer */
   /*##-1- Link the micro SD disk I/O driver ##################################*/
   if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
   {
@@ -323,6 +360,328 @@ void FATFS_Test(void)
   FATFS_UnLinkDriver(SDPath);	
 	
 }
+
+/**
+  * @brief  Read config data file from SD Card
+  * @param  None
+  * @retval None
+  */
+void READ_CONFIG_File(void)
+{
+	FRESULT res;                                          /* FatFs function common result code */
+  uint32_t byteswritten, bytesread;                     /* File write/read counts */
+  uint8_t wtext[] = "11,50,60,60,0;12,60,70,70,1;13,70,80,80,0;14,80,90,100,0;\
+											21,50,60,60,0;22,60,70,70,1;23,70,80,80,0;24,80,90,100,0;\
+												31,50,60,60,0;32,60,70,70,1;33,70,80,80,0;34,80,90,100,0;\
+													41,50,60,60,0;42,60,70,70,1;43,70,80,80,0;44,80,90,100,0;\
+														51,70;\
+															61,2;"; /* File write buffer */
+  uint8_t rtext[500];                                   /* File read buffer */
+	//uint8_t text[500];
+  /*##-1- Link the micro SD disk I/O driver ##################################*/
+  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+  {
+    /*##-2- Register the file system object to the FatFs module ##############*/
+    if(f_mount(&SDFatFs, (TCHAR const*)SDPath, 0) != FR_OK)
+    {
+      /* FatFs Initialization Error */
+      Error_Handler();
+    }
+    else
+    {
+      if(f_open(&MyFile, "RC.TXT", FA_OPEN_ALWAYS | FA_WRITE|FA_READ) != FR_OK)
+      {
+          /* 'STM32.TXT' file Open for write Error */
+          Error_Handler();
+      }
+      else
+      {
+          /*##-5- Write data to the text file ################################*/
+          res = f_read(&MyFile, rtext, sizeof(rtext), (UINT*)&bytesread);
+          if(res != FR_OK)
+          {
+            /* 'STM32.TXT' file read or EOF Error */
+            Error_Handler();
+          }
+					else if(bytesread == 0)
+          {
+            /* 'STM32.TXT' file empty, write default data to file */
+            /*##-5- Write data to the text file ################################*/
+						res = f_write(&MyFile, wtext, sizeof(wtext), (void *)&byteswritten);
+						if((byteswritten == 0) || (res != FR_OK))
+						{
+							/* 'STM32.TXT' file Write or EOF Error */
+							Error_Handler();
+						}
+						else
+							f_close(&MyFile);
+						TXT_2_NUM(wtext);
+					}
+					
+          else
+					{
+						TXT_2_NUM(rtext);
+						/*##-6- Close the open text file #################################*/
+						f_close(&MyFile);
+					}            
+      }
+    }
+  }
+  
+  /*##-11- Unlink the micro SD disk I/O driver ###############################*/
+  FATFS_UnLinkDriver(SDPath);		
+	
+	//NUM_2_TXT(text);
+	
+}
+
+/**
+  * @brief  Read config data file from SD Card
+  * @param  None
+  * @retval None
+  */
+void WRITE_CONFIG_File(void)
+{
+	FRESULT res;                                          /* FatFs function common result code */
+  uint32_t byteswritten, bytes;                     /* File write/read counts */
+  uint8_t wtext[500]; 																	/* File write buffer */
+  //uint8_t rtext[100];                                   /* File read buffer */
+  /*##-1- Link the micro SD disk I/O driver ##################################*/
+  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+  {
+    /*##-2- Register the file system object to the FatFs module ##############*/
+    if(f_mount(&SDFatFs, (TCHAR const*)SDPath, 0) != FR_OK)
+    {
+      /* FatFs Initialization Error */
+      Error_Handler();
+    }
+    else
+    {
+      if(f_unlink ("RC.TXT") != FR_OK)
+      {
+          /* 'STM32.TXT' file Open for write Error */
+          Error_Handler();
+      }
+      else
+      {
+        if(f_open(&MyFile, "RC.TXT", FA_OPEN_ALWAYS | FA_WRITE|FA_READ) != FR_OK)
+				{
+          /* 'STM32.TXT' file Open for write Error */
+          Error_Handler();
+				}
+				else
+				{
+          //writ to the file
+					bytes=NUM_2_TXT(wtext);
+					res = f_write(&MyFile, wtext, bytes, (void *)&byteswritten);
+					if((byteswritten == 0) || (res != FR_OK))
+					{
+						/* 'STM32.TXT' file Write or EOF Error */
+						Error_Handler();
+					}
+					else
+						f_close(&MyFile);						
+        }
+			}
+		}
+  }
+  /*##-11- Unlink the micro SD disk I/O driver ###############################*/
+  FATFS_UnLinkDriver(SDPath);		
+}
+
+/**
+  * @brief  Read config data file from SD Card
+  * @param  None
+  * @retval None
+  */
+uint32_t NUM_2_TXT(uint8_t* txt)
+{
+	uint32_t i=0,j=0,ch=0,model;
+	uint8_t tmp[3];
+	uint32_t num;
+	uint32_t data[5];	
+	for(model=0;model<4;model++)
+	{
+		for(ch=0;ch<4;ch++)
+		{ 
+			data[0]=(uint32_t)(_ModelData[model][ch].Model);
+			data[1]=(uint32_t)(_ModelData[model][ch].SubTrim+50);
+			data[2]=(uint32_t)_ModelData[model][ch].Endpoint_p;
+			data[3]=(uint32_t)_ModelData[model][ch].Endpoint_n;
+			data[4]=(uint32_t)_ModelData[model][ch].Reverse;	
+			for(j=0;j<5;j++)
+			{
+				tmp[0]=data[j]/100;
+				num=data[j]%100;
+				tmp[1]=num/10;
+				tmp[2]=num%10;
+				if(tmp[0]!=0)
+				{
+					*(txt+i)=tmp[0]+48;
+					i++;
+					*(txt+i)=tmp[1]+48;
+					i++;
+					*(txt+i)=tmp[2]+48;
+					i++;
+				}
+				else if(tmp[1]!=0)
+				{
+					*(txt+i)=tmp[1]+48;
+					i++;
+					*(txt+i)=tmp[2]+48;
+					i++;
+				}		
+				else
+				{
+					*(txt+i)=tmp[2]+48;
+					i++;
+				}
+				if(j==4)			
+					*(txt+i)=';';
+				else
+					*(txt+i)=',';
+				i++;
+			}
+		}
+	}	
+	//backlight
+	*(txt+i)='5';
+	i++;
+	*(txt+i)='1';
+	i++;
+	*(txt+i)=',';
+	i++;
+	data[0]=BACKLIGHT;
+	tmp[0]=data[0]/100;
+	num=data[0]%100;
+	tmp[1]=num/10;
+	tmp[2]=num%10;
+	if(tmp[0]!=0)
+	{
+		*(txt+i)=tmp[0]+48;
+		i++;
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	else if(tmp[1]!=0)
+	{
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}		
+	else
+	{
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	*(txt+i)=';';
+	i++;
+	
+	//model
+	*(txt+i)='6';
+	i++;
+	*(txt+i)='1';
+	i++;
+	*(txt+i)=',';
+	i++;
+	data[0]=MODEL;
+	tmp[0]=data[0]/100;
+	num=data[0]%100;
+	tmp[1]=num/10;
+	tmp[2]=num%10;
+	if(tmp[0]!=0)
+	{
+		*(txt+i)=tmp[0]+48;
+		i++;
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	else if(tmp[1]!=0)
+	{
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}		
+	else
+	{
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	*(txt+i)=';';
+	i++;
+	*(txt+i)='\0';
+	return i;
+}
+
+
+/**
+  * @brief  Read config data file from SD Card
+  * @param  None
+  * @retval None
+  */
+void TXT_2_NUM(uint8_t* txt)
+{
+	uint32_t i=0,j=0,ch=0,k=0,model=0;
+	uint8_t tmp[3];
+	uint32_t num;
+	uint32_t data[5];	
+	//Typdef_ModelData *_ModelData[4];
+	for(i=0;*(txt+i)!='\0';i++)
+  { 
+		if((*(txt+i)!=';')&&(*(txt+i)!=','))
+		{	
+			tmp[j]=*(txt+i);
+			j++;
+		}
+		else
+		{
+			if(j==1)
+				num=tmp[0]-48;
+			else if(j==2)
+				num=10*(tmp[0]-48)+(tmp[1]-48);
+			else if(j==3)
+				num=100*(tmp[0]-48)+10*(tmp[1]-48)+(tmp[2]-48);
+			
+			j=0;
+			data[k]=num;
+			k++;
+		}
+		
+		if(*(txt+i)==';')
+		{
+			k=0;
+			model=data[0]/10-1;
+			if((ch<4)&&(model<4))
+			{
+				_ModelData[model][ch].Model=data[0];
+				_ModelData[model][ch].SubTrim=(signed int)(data[1]-50);				
+				_ModelData[model][ch].Endpoint_p=data[2];
+				_ModelData[model][ch].Endpoint_n=data[3];
+				_ModelData[model][ch].Reverse=data[4];
+				ch++;				
+			}
+			if(ch==4)
+			{
+				ch=0;
+				//model++;
+			}
+			if(model==4)
+			{
+				//model++;
+				BACKLIGHT=data[1];			
+			}
+			if(model==5)
+				MODEL=data[1];
+		}			
+	}
+}
+
 
 
 /**
@@ -475,7 +834,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   * @param  RC_DATA_TypeDef
   * @retval None
   */
-void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data)
+void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data,Typdef_ModelData *_ModelData)
 {
 	uint32_t tmp;
 	uint32_t temp,temp_mid;
@@ -552,16 +911,20 @@ void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data)
 	if(_ModelData[2].Reverse==1)
 	{
 		if(CH3_Switch==1)
-			tmp+=_ModelData[2].SubTrim-_ModelData[2].Endpoint_n;
+			tmp=tmp-_ModelData[2].Endpoint_n;
 		else if(CH3_Switch==2) 
-			tmp+=_ModelData[2].SubTrim+_ModelData[2].Endpoint_p;
+			tmp+=_ModelData[2].Endpoint_p;
+		else if(CH3_Switch==0)
+			tmp=tmp-_ModelData[2].SubTrim;
 	}
 	else
 	{
 		if(CH3_Switch==1)
-			tmp+=_ModelData[2].SubTrim+_ModelData[2].Endpoint_p;
+			tmp+=_ModelData[2].Endpoint_p;
 		else if(CH3_Switch==2) 
-			tmp+=_ModelData[2].SubTrim-_ModelData[2].Endpoint_n;		
+			tmp=tmp-_ModelData[2].Endpoint_n;
+		else if(CH3_Switch==0)
+			tmp+=_ModelData[2].SubTrim;
 	}
 	rc_data->RC_TX_Data.CHANNEL3=tmp;
 
@@ -582,16 +945,20 @@ void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data)
 	if(_ModelData[3].Reverse==1)
 	{
 		if(CH4_Switch==1)
-			tmp+=_ModelData[3].SubTrim-_ModelData[3].Endpoint_n;
+			tmp=tmp-_ModelData[3].Endpoint_n;
 		else if(CH4_Switch==2) 
-			tmp+=_ModelData[3].SubTrim+_ModelData[3].Endpoint_p;
+			tmp+=_ModelData[3].Endpoint_p;
+		else
+			tmp=tmp-_ModelData[3].SubTrim;
 	}
 	else
 	{
 		if(CH4_Switch==1)
-			tmp+=_ModelData[3].SubTrim+_ModelData[3].Endpoint_p;
+			tmp+=_ModelData[3].Endpoint_p;
 		else if(CH4_Switch==2) 
-			tmp+=_ModelData[3].SubTrim-_ModelData[3].Endpoint_n;		
+			tmp=tmp-_ModelData[3].Endpoint_n;	
+		else
+			tmp+=_ModelData[3].SubTrim;
 	}
 	rc_data->RC_TX_Data.CHANNEL4=tmp;
 
@@ -631,7 +998,7 @@ void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data)
 
 void SRAM_Test()
 {
-	uint8_t uwWriteReadStatus;
+	//uint8_t uwWriteReadStatus;
 	uint32_t uwIndex;
 	/*##-2- SRAM memory read/write access ######################################*/  
   /* Fill the buffer to write */
@@ -658,7 +1025,7 @@ void SRAM_Test()
   } 
 
   /*##-3- Checking data integrity ############################################*/    
-  uwWriteReadStatus = Buffercmp(aTxBuffer, aRxBuffer, BUFFER_SIZE);	
+  //uwWriteReadStatus = Buffercmp(aTxBuffer, aRxBuffer, BUFFER_SIZE);	
 	
 	
 }

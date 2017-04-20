@@ -403,8 +403,9 @@ static void SD_MspInit(void)
   GPIO_Init_Structure.Pin = GPIO_PIN_2;
   HAL_GPIO_Init(GPIOD, &GPIO_Init_Structure);
 
-  /* NVIC configuration for SDIO interrupts */
-  HAL_NVIC_SetPriority(SDIO_IRQn, 5, 0);
+
+	/* NVIC configuration for SDIO interrupt */
+  HAL_NVIC_SetPriority(SDIO_IRQn, 0, 6);
   HAL_NVIC_EnableIRQ(SDIO_IRQn);
     
   /* Configure DMA Rx parameters */
@@ -465,9 +466,7 @@ static void SD_MspInit(void)
   HAL_NVIC_SetPriority(SD_DMAx_Tx_IRQn, 0, 4);
   HAL_NVIC_EnableIRQ(SD_DMAx_Tx_IRQn);
 	
-	/* NVIC configuration for SDIO interrupt */
-  HAL_NVIC_SetPriority(SDIO_IRQn, 0, 6);
-  HAL_NVIC_EnableIRQ(SD_DMAx_Tx_IRQn);
+
 	
 }
 
