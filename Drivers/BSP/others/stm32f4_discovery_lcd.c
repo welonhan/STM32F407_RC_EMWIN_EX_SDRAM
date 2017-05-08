@@ -84,7 +84,7 @@ void BSP_LCD_BACKLIGHT_PWM_Init(void)
 void BSP_LCD_BACKLIGHT_PWM_Set(uint8_t i)
 {
 	/* Set the pulse value for channel 1 */
-	if(i<100)
+	if(i<=100)
 	{	
 		sConfig.Pulse = (PERIOD_VALUE*(15+85*i/100))/100;  
 		if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfig, TIM_CHANNEL_2) != HAL_OK)
@@ -102,6 +102,28 @@ void BSP_LCD_BACKLIGHT_PWM_Set(uint8_t i)
 			printf("lcd backlight pwm start fail\n\r");
 		}	
 	}
+}
+
+void BSP_LCD_BACKLIGHT_Off(void)
+{
+	/* Set the pulse value for channel 1 */
+		
+		sConfig.Pulse = 0;  
+		if(HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfig, TIM_CHANNEL_2) != HAL_OK)
+		{
+			/* Configuration Error */
+			printf("lcd backlight pwm setting pulse1 fail\n\r");
+		}
+		
+		/*##-3- Start PWM signals generation #######################################*/ 
+		/* Start channel 1 */
+		
+		if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_2) != HAL_OK)
+		{
+			
+			printf("lcd backlight pwm start fail\n\r");
+		}	
+	
 }
 
 /**

@@ -42,6 +42,7 @@ void 			BSP_LCD_BACKLIGHT_PWM_Init(void);
 void 			BSP_LCD_BACKLIGHT_PWM_Set(uint8_t i);
 void 			LCD_BACKLIGHT_PWM_50duty(void);
 void 			LCD_BACKLIGHT_PWM_25duty(void);
+void 			BSP_LCD_BACKLIGHT_Off(void);
 
 #endif
 

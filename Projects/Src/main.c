@@ -133,13 +133,15 @@ Typdef_ModelData _ModelData[4][4]=
 		{44,	0, 	100, 100,0},
 	},
 };
-
+uint8_t ADC_REF=50;
 uint8_t BACKLIGHT=100;
+uint8_t tmp_backlight, tmp_adc_ref;
+Typdef_ModelData tmp_modeldata[4];
 
 uint8_t CH3_Switch=0;
 uint8_t CH4_Switch=0;
 uint8_t MODEL=0;
-
+uint8_t BACKLIGHT_ON=1;
 uint32_t DASH_BOARD[4]=
 {
 	180,180,180,180
@@ -375,7 +377,8 @@ void READ_CONFIG_File(void)
 												31,50,60,60,0;32,60,70,70,1;33,70,80,80,0;34,80,90,100,0;\
 													41,50,60,60,0;42,60,70,70,1;43,70,80,80,0;44,80,90,100,0;\
 														51,70;\
-															61,2;"; /* File write buffer */
+															61,2;\
+																71,50;"; /* File write buffer */
   uint8_t rtext[500];                                   /* File read buffer */
 	//uint8_t text[500];
   /*##-1- Link the micro SD disk I/O driver ##################################*/
@@ -615,7 +618,44 @@ uint32_t NUM_2_TXT(uint8_t* txt)
 	}
 	*(txt+i)=';';
 	i++;
+	
+	//ADC REF
+	*(txt+i)='7';
+	i++;
+	*(txt+i)='1';
+	i++;
+	*(txt+i)=',';
+	i++;
+	data[0]=ADC_REF;
+	tmp[0]=data[0]/100;
+	num=data[0]%100;
+	tmp[1]=num/10;
+	tmp[2]=num%10;
+	if(tmp[0]!=0)
+	{
+		*(txt+i)=tmp[0]+48;
+		i++;
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	else if(tmp[1]!=0)
+	{
+		*(txt+i)=tmp[1]+48;
+		i++;
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}		
+	else
+	{
+		*(txt+i)=tmp[2]+48;
+		i++;
+	}
+	*(txt+i)=';';
+	i++;
 	*(txt+i)='\0';
+	
 	return i;
 }
 
@@ -657,6 +697,7 @@ void TXT_2_NUM(uint8_t* txt)
 		{
 			k=0;
 			model=data[0]/10-1;
+			ch=data[0]%10-1;
 			if((ch<4)&&(model<4))
 			{
 				_ModelData[model][ch].Model=data[0];
@@ -664,13 +705,13 @@ void TXT_2_NUM(uint8_t* txt)
 				_ModelData[model][ch].Endpoint_p=data[2];
 				_ModelData[model][ch].Endpoint_n=data[3];
 				_ModelData[model][ch].Reverse=data[4];
-				ch++;				
+				//ch++;				
 			}
-			if(ch==4)
-			{
-				ch=0;
+			//if(ch==4)
+			////{
+			//	ch=0;
 				//model++;
-			}
+			//}
 			if(model==4)
 			{
 				//model++;
@@ -678,6 +719,8 @@ void TXT_2_NUM(uint8_t* txt)
 			}
 			if(model==5)
 				MODEL=data[1];
+			if(model==6)
+				ADC_REF=data[1];
 		}			
 	}
 }
@@ -759,7 +802,8 @@ static void SystemClock_Config(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	uint8_t NRF24L01_IRQ_status;
-  if(GPIO_Pin == TOUCH_INT_PIN)										//PB7 TOUCH INT
+	//uint32_t=10000;
+  if((GPIO_Pin == TOUCH_INT_PIN)&&BACKLIGHT_ON)										//PB7 TOUCH INT
   {
 
     if(BSP_TOUCH_Read(TOUCH_Dat)==0)
@@ -783,10 +827,24 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			BSP_LED_Toggle(LEDR);
   }
 	
-	if(GPIO_Pin == KEY_BUTTON_PIN)									//PA0 KEY INT
+	else if(GPIO_Pin == KEY_BUTTON_PIN)									//PA0 KEY INT
   {
     BSP_LED_Toggle(LEDR);
-
+		//GUI_Delay(20);
+		
+		if(BACKLIGHT_ON)
+		{
+			//BSP_LCD_BACKLIGHT_PWM_Set(0);
+			BACKLIGHT_ON=0;
+			BSP_LCD_BACKLIGHT_Off();
+		}
+		else
+		{
+			BSP_LCD_BACKLIGHT_PWM_Set(BACKLIGHT);
+			BACKLIGHT_ON=1;
+			
+		}
+		
 #ifdef DEBUG_MODE		
 		NRF24L01_TxPacket( (uint8_t *)NRF24L01_TX_DATA, NRF24L01_TX_NUM );
 
@@ -803,7 +861,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 #endif		
   }
 	
-	if(GPIO_Pin == RF24L01_IRQ_GPIO_PIN)						//RF24L01 IRQ
+	else if(GPIO_Pin == RF24L01_IRQ_GPIO_PIN)						//RF24L01 IRQ
 	{
 #ifdef DEBUG_MODE
 		NRF24L01_IRQ_status=NRF24L01_IRQ((uint8_t *) &NRF24L01_ACK_DATA,NRF24L01_ACK_NUM);
@@ -975,14 +1033,14 @@ void RC_TX_DataHandle(RC_DATA_TypeDef* rc_data,Typdef_ModelData *_ModelData)
 	
 	//温度处理, 单位摄氏度
 	//(Vsense-V25)/Vslope+25, Vref=2890mV, Vsense=Vref*Adc>>12, V25=760mV, Vslope=2.5mV/C     
-	temp=(10*(((rc_data->ADC_DATA.ADC_TMP*3260)>>12)-760))/25+25;
+	temp=(10*(((rc_data->ADC_DATA.ADC_TMP*(3260+ADC_REF-50))>>12)-760))/25+25;
 	ADC_Tmp_Num +=temp;
 
 	
 	
 	//电池电压处理，单位mV
 	//Vsense=Vref*Adc>>12, Vref=3250mV  
-	temp=(((rc_data->ADC_DATA.ADC_BAT*3260)>>12)/2)*3;
+	temp=(((rc_data->ADC_DATA.ADC_BAT*(3260+ADC_REF-50))>>12)/2)*3;
 	ADC_Bat_Num+=temp;
 	
 	ADC_Count++;

@@ -96,8 +96,10 @@ Requirements: WindowManager - (x)
 #define ID_SYS_TEXT_0									(GUI_ID_USER + 0x31)
 #define ID_SYS_BUTTON_OK							(GUI_ID_USER + 0x32)
 #define ID_SYS_BUTTON_CANCLE					(GUI_ID_USER + 0x33)
-#define ID_SYS_SCROLLBAR_0						(GUI_ID_USER + 0x34)		
-		
+#define ID_SYS_SCROLLBAR_0						(GUI_ID_USER + 0x34)	
+#define ID_SYS_SCROLLBAR_1						(GUI_ID_USER + 0x35)
+#define ID_SYS_TEXT_1									(GUI_ID_USER + 0x36)
+
 #define ID_P1_WINDOW									(GUI_ID_USER + 0x41)
 #define ID_P1_SCROLLBAR_0							(GUI_ID_USER + 0x42)
 #define ID_P1_SCROLLBAR_1							(GUI_ID_USER + 0x43)
@@ -163,6 +165,9 @@ extern uint8_t CH3_Switch;
 extern uint8_t CH4_Switch;
 extern uint8_t BACKLIGHT;
 extern uint8_t MODEL;
+extern uint8_t ADC_REF;
+extern uint8_t tmp_backlight, tmp_adc_ref;
+extern Typdef_ModelData tmp_modeldata[4];
 
 //
 // Handles
@@ -331,6 +336,8 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreateWinSystem[] = {
   { FRAMEWIN_CreateIndirect, 	"System", 			ID_WINDOW_SYSTEM, 		0, 0, 800, 480, 0, 0x0, 0 },
 	{ SCROLLBAR_CreateIndirect, "Scrollbar",		ID_SYS_SCROLLBAR_0,		120,	20,		250,	35,		0, 0x0, 0 },
 	{ TEXT_CreateIndirect, 			"SYSTEM?",			ID_SYS_TEXT_0 , 			50, 	20, 	50, 35, TEXT_CF_VCENTER },
+	{ SCROLLBAR_CreateIndirect, "Scrollbar",		ID_SYS_SCROLLBAR_1,		120,	70,		250,	35,		0, 0x0, 0 },
+	{ TEXT_CreateIndirect, 			"SYSTEM?",			ID_SYS_TEXT_1 , 			50, 	70, 	50, 35, TEXT_CF_VCENTER },
   { BUTTON_CreateIndirect, 		"OK", 					ID_SYS_BUTTON_OK, 		200, 300, 100, 30 },
 	{ BUTTON_CreateIndirect, 		"Cancel", 			ID_SYS_BUTTON_CANCLE, 500, 300, 100, 30 },
 };
@@ -937,6 +944,8 @@ static void _RC_cbFrameWinConfig(WM_MESSAGE* pMsg) {
   //WM_HWIN hItem;
 	int     NCode;
   int     Id;
+	unsigned int i;
+	
 	
   // USER START (Optionally insert additional variables)
   // USER END
@@ -964,6 +973,14 @@ static void _RC_cbFrameWinConfig(WM_MESSAGE* pMsg) {
 		MULTIPAGE_SetFont(hMultiPage, &GUI_Font24B_ASCII);
     // USER START (Optionally insert additional code for further widget initialization)
     // USER END
+		for(i=0;i<4;i++)
+		{
+			tmp_modeldata[i].SubTrim		=_ModelData[MODEL][i].SubTrim;			
+			tmp_modeldata[i].Endpoint_p	=_ModelData[MODEL][i].Endpoint_p;
+			tmp_modeldata[i].Endpoint_n	=_ModelData[MODEL][i].Endpoint_n;
+			tmp_modeldata[i].Model			=_ModelData[MODEL][i].Model;
+			tmp_modeldata[i].Reverse		=_ModelData[MODEL][i].Reverse;
+		}
     break;
   case WM_NOTIFY_PARENT:
     Id    = WM_GetId(pMsg->hWinSrc);
@@ -994,6 +1011,26 @@ static void _RC_cbFrameWinConfig(WM_MESSAGE* pMsg) {
 		case ID_CFG_BUTTON_OK: // Notifications sent by 'Scrollbar'
       switch(NCode) {
         case WM_NOTIFICATION_RELEASED:		//save config
+				GUI_EndDialog(hWinPage1,0);
+				GUI_EndDialog(hWinPage2,0);
+				GUI_EndDialog(hWinPage3,0);
+				GUI_EndDialog(hWinPage4,0);
+				GUI_EndDialog(hMultiPage,0);
+				GUI_EndDialog(_RC_hWindowConfig,0);
+				break;
+			}
+			break;
+		case ID_CFG_BUTTON_CANCLE: // Notifications sent by 'Scrollbar'
+      switch(NCode) {
+        case WM_NOTIFICATION_RELEASED:		//cancel config
+				for(i=0;i<4;i++)
+				{
+					_ModelData[MODEL][i].SubTrim		=tmp_modeldata[i].SubTrim;			
+					_ModelData[MODEL][i].Endpoint_p	=tmp_modeldata[i].Endpoint_p;
+					_ModelData[MODEL][i].Endpoint_n	=tmp_modeldata[i].Endpoint_n;
+					_ModelData[MODEL][i].Model			=tmp_modeldata[i].Model;
+					_ModelData[MODEL][i].Reverse		=tmp_modeldata[i].Reverse;
+				}
 				GUI_EndDialog(hWinPage1,0);
 				GUI_EndDialog(hWinPage2,0);
 				GUI_EndDialog(hWinPage3,0);
@@ -1061,17 +1098,18 @@ static void _RC_cbFrameWinSave(WM_MESSAGE* pMsg) {
 *       _RC_cbFrameWinSystem
 */
 static void _RC_cbFrameWinSystem(WM_MESSAGE* pMsg) {
-	int NCode,Id;
-	WM_HWIN hScrollBar0;
+	int NCode,Id;	
+	WM_HWIN hScrollBar0,hScrollBar1;
 	WM_HWIN hWin=pMsg->hWin;
-	WM_HWIN hItem;
-	WM_SCROLL_STATE pState0;
+	WM_HWIN hItem,hClient;
+	WM_SCROLL_STATE pState0,pState1;
 	
 	//WM_SCROLL_STATE pState;
 	
 	/* Get window handles for all widgets */
 	hScrollBar0	= WM_GetDialogItem(hWin, ID_SYS_SCROLLBAR_0);
-  
+  hScrollBar1	= WM_GetDialogItem(hWin, ID_SYS_SCROLLBAR_1);
+	
 	switch(pMsg->MsgId) {
 	case WM_INIT_DIALOG:
     //
@@ -1080,11 +1118,20 @@ static void _RC_cbFrameWinSystem(WM_MESSAGE* pMsg) {
     hItem = WM_GetDialogItem(pMsg->hWin, ID_SYS_TEXT_0);
     TEXT_SetText(hItem, "Backlight");
     
+		hItem = WM_GetDialogItem(pMsg->hWin, ID_SYS_TEXT_1);
+    TEXT_SetText(hItem, "ADC REF");
+	
 		pState0.NumItems=110;
-		pState0.v=BACKLIGHT;
-		//BSP_LCD_BACKLIGHT_PWM_Set(pState0.v);
 		pState0.PageSize=10;
+		pState0.v=BACKLIGHT;
 		SCROLLBAR_SetState(hScrollBar0,&pState0);
+		pState1.NumItems=110;
+		pState1.PageSize=10;
+		pState1.v=ADC_REF;
+		SCROLLBAR_SetState(hScrollBar1,&pState1);	
+		
+		tmp_backlight=BACKLIGHT;
+		tmp_adc_ref=ADC_REF;
 			
     break;	
 		
@@ -1095,33 +1142,76 @@ static void _RC_cbFrameWinSystem(WM_MESSAGE* pMsg) {
     case ID_SYS_BUTTON_OK: 
       switch(NCode) {
 				case WM_NOTIFICATION_CLICKED:		//save config
+				//BACKLIGHT=tmp_backlight;
+				//BSP_LCD_BACKLIGHT_PWM_Set(BACKLIGHT);
 				
+				//ADC_REF=tmp_adc_ref;
 				WM_DeleteWindow(_RC_hWindowSystem);
-			break;
+				break;
 			}
 		break;
 		case ID_SYS_BUTTON_CANCLE: 
       switch(NCode) {
 				case WM_NOTIFICATION_CLICKED:
+				//restore the value ;
+				BACKLIGHT=tmp_backlight;
+				BSP_LCD_BACKLIGHT_PWM_Set(BACKLIGHT);				
+				ADC_REF=tmp_adc_ref;
 				WM_DeleteWindow(_RC_hWindowSystem);
-			break;
+				break;
 			}
 		break;
 		case ID_SYS_SCROLLBAR_0: 
       switch(NCode) {
 				case WM_NOTIFICATION_VALUE_CHANGED:
         WM_GetScrollState(hScrollBar0,&pState0);
-				BSP_LCD_BACKLIGHT_PWM_Set(pState0.v);
 				BACKLIGHT=pState0.v;
-											
+				BSP_LCD_BACKLIGHT_PWM_Set(BACKLIGHT);
+				WM_SelectWindow(_RC_hWindowSystem);
+				hClient=WM_GetClientWindow(_RC_hWindowSystem);
+				WM_SelectWindow(hClient);
+				GUI_SetColor(GUI_WHITE);
+				GUI_FillRect(400,20,500,60);
+				GUI_SetTextMode(GUI_TM_TRANS);
+				GUI_SetColor(GUI_RED);
+				GUI_DispDecAt(pState0.v ,400,20,3);
+				//BACKLIGHT=pState0.v;											
 	      break;
 			}
+		break;
+		case ID_SYS_SCROLLBAR_1: 
+		switch(NCode) {
+			case WM_NOTIFICATION_VALUE_CHANGED:
+			WM_GetScrollState(hScrollBar1,&pState1);
+			ADC_REF=pState1.v;
+			WM_SelectWindow(_RC_hWindowSystem);
+			hClient=WM_GetClientWindow(_RC_hWindowSystem);
+			WM_SelectWindow(hClient);
+			GUI_SetColor(GUI_WHITE);
+			GUI_FillRect(400,70,500,110);
+			GUI_SetTextMode(GUI_TM_TRANS);
+			GUI_SetColor(GUI_RED);
+			GUI_DispDecAt(pState1.v-50 ,400,70,3);
+			//BSP_LCD_BACKLIGHT_PWM_Set(pState0.v);
+			//BACKLIGHT=pState0.v;
+										
+			break;
+		}
 		break;
 		}
 	break;
 	
   case WM_PAINT:
-
+		//GUI_Clear();
+		//WM_InvalidateWindow(_RC_hWindowSystem);
+		GUI_SetColor(GUI_RED);
+   
+		//display the text
+		GUI_SetTextMode(GUI_TM_TRANS);
+    GUI_SetFont(&GUI_Font24B_ASCII);
+		GUI_DispDecAt((unsigned int)(BACKLIGHT) ,400,20,3);
+		GUI_DispDecAt((signed int)(ADC_REF-50) ,400,70,3);
+		
     break;
   default:
     WM_DefaultProc(pMsg);
@@ -1132,6 +1222,7 @@ static void _cbDialog_P1(WM_MESSAGE * pMsg) {
   WM_HWIN hItem;
 	WM_HWIN hScrollBar0,hScrollBar1,hScrollBar2,hCheckBox;
 	WM_HWIN hWin=pMsg->hWin;
+	
 	//WM_SCROLL_STATE pState;
 
   int     NCode;
